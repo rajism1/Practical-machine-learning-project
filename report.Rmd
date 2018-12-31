@@ -1,0 +1,100 @@
+---
+title: "Practical Machine Learning Project"
+author: "Raj Kumar"
+date: "31 December 2018"
+output: html_document
+---
+
+
+The main aim of this project is to predict the manner in which people exercise
+
+Loading packages:-
+```{r}
+library(caret)
+library(ggplot2)
+library(randomForest)
+```
+
+Reading Data sets for the project
+```{r}
+trainraw<- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+testraw <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+
+```
+
+Data at a glance
+```{r}
+str(trainraw)
+```
+
+We can see that a number of columns contains NAs and blanks values.
+so we will remove such columns where we have more than 95% of NAs or blanks.
+```{r}
+rmcol<- c()
+for (i in 1:length(trainraw)) {
+   x<-sum(is.na(trainraw[,i]))  ##looking for column containing NA
+  y<- sum(trainraw[,i]=="")     ##looking for blank column
+  per1<-y/length(trainraw[,i])  
+  per2 <-x/length(trainraw[,i])
+  if(per1>0.95 | per2>0.95){rmcol<-c(rmcol,i)}
+}
+
+#removing unwanted columns
+trainraw<-trainraw[,-rmcol]
+##focus is mostly on  reading from equipments so removing starting 7 columns
+trainraw<-trainraw[,-c(1:7)]
+```
+Repeating the same for test data
+
+```{r}
+rmcol<- c()
+for (i in 1:length(testraw)) {
+  x<-sum(is.na(testraw[,i]))  ##looking for column containing NA
+  y<- sum(testraw[,i]=="")     ##looking for blank column
+  per1<-y/length(testraw[,i])  
+  per2 <-x/length(testraw[,i])
+  if(per1>0.95 | per2>0.95){rmcol<-c(rmcol,i)}
+}
+
+#removing unwanted columns
+testraw<-testraw[,-rmcol]
+testraw<- testraw[,-c(1:7)]
+
+```
+
+Now our data is cleaned and ready for modelling
+
+Data Partition:-
+we will use 70% of data for training and remaining 30% for validation of model.
+```{r}
+trainlist<-createDataPartition(trainraw$classe,p=0.7,list = FALSE)
+trainset<-trainraw[trainlist,]
+testset<- trainraw[-c(trainlist),]
+```
+
+Training model with random forest
+```{r}
+rfmod<- randomForest(trainset$classe ~ . , data = trainset)
+```
+Validating our model with test set of training data
+```{r}
+rfpred<-predict(rfmod,testset)
+plot(rfmod, main="Variation of error with trees")
+
+##Displaying Confusion Matrix
+cmrf<-confusionMatrix(rfpred,testset$classe)
+cmrf
+```
+
+we have a accuracy of more than 99% with random forest
+Calculating out of sample error
+```{r}
+print(paste("out of sample error is: ",1-cmrf$overall[1]))
+```
+
+Predicting Test data with built model
+```{r}
+pred2<- predict(rfmod,testraw,type = "class")
+pred2
+```
+
